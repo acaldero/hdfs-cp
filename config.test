@@ -1,0 +1,6 @@
+#!/bin/bash
+set -x
+
+BASE_HDFS=/daloflow/
+LIST_CACHE=./example.txt
+BASE_CACHE=./test/

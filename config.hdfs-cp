@@ -1,0 +1,7 @@
+#!/bin/bash
+#set -x
+
+BASE_HDFS=/mnt/local-storage/prueba-hdfs/hadoop/
+BASE_JAVA=/usr/lib/jvm/java-8-openjdk-amd64/
+BASE_LIBHDFS=/mnt/local-storage/prueba-hdfs/lib-hdfs/
+
