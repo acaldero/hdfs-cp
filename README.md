@@ -30,7 +30,10 @@ EOF
 
 To list the main metadata for a list of HDFS files:
 ```bash
-./hdfs-cp.sh stats4hdfs /HDFS_root_directory example.txt ./tmp
+./hdfs-cp.sh stats4hdfs \
+             /HDFS_root_directory \
+             example.txt \
+             ./tmp
 ```
 
 In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
@@ -45,7 +48,10 @@ To copy a HDFS list of files into a local directory:
 rm -fr ./tmp
 mkdir -p ./tmp
 
-./hdfs-cp.sh hdfs2local /HDFS_root_directory example.txt ./tmp
+./hdfs-cp.sh hdfs2local \
+             /HDFS_root_directory \
+             example.txt \
+             ./tmp
 ```
 
 All files listed on "example.txt" are going to be copied into the "./tmp" directory.
