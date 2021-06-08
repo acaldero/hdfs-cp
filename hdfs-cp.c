@@ -569,6 +569,9 @@ void main_usage ( char *app_name )
        printf("  > %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
        printf("    Copy from a HDFS path to a local cache path a list of files (within file_list.txt).\n") ;
        printf("\n") ;
+       printf("  > %s local2hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
+       printf("    Copy to a HDFS path a list of files (within file_list.txt).\n") ;
+       printf("\n") ;
        printf("  > %s stats4hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
        printf("    List HDFS metadata from the list of files within file_list.txt.\n") ;
        printf("\n") ;
