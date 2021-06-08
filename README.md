@@ -9,6 +9,7 @@
  git clone https://github.com/acaldero/hdfs-cp.git
  cd hdfs-cp
  chmod +x *.sh
+ make clean; make
 ``` 
 2. To configure for your Java, HDFS and LIBHDFS installation:
 ```bash
@@ -45,8 +46,7 @@ In this example, "example.txt" has a list of files (one per line) relatives to "
 
 To copy a HDFS list of files into a local directory:
 ```bash
-rm -fr ./tmp
-mkdir -p ./tmp
+rm -fr ./tmp; mkdir -p ./tmp
 
 ./hdfs-cp.sh hdfs2local \
              /HDFS_root_directory \

@@ -24,9 +24,10 @@ fi
 #
 BASE_CACHE_IN_CONTAINER=$BASE_CACHE"/"$(hostname)
 
-# Remove old "train*.tar.gz" files at $BASE_CACHE...
+# Remove old files at $BASE_CACHE...
 rm -fr $BASE_CACHE_IN_CONTAINER
 
 # Copy new files
-$BASE_DIR/hdfs-cp.sh $BASE_HDFS $LIST_CACHE $BASE_CACHE_IN_CONTAINER
+$BASE_DIR/hdfs-cp.sh local2hdfs $BASE_HDFS $LIST_CACHE $BASE_CACHE_IN_CONTAINER
+$BASE_DIR/hdfs-cp.sh hdfs2local $BASE_HDFS $LIST_CACHE $BASE_CACHE_IN_CONTAINER
 
