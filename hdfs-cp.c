@@ -338,9 +338,17 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *hdfs_file_name, char *local_file_
      return ret ;
 }
 
-int hdfs_stats ( char *hdfs_file_name, char *machine_name, char ***blocks_information )
+int hdfs_stats ( hdfsFS fs, char *hdfs_file_name, char *machine_name )
 {
      char hostname_list[1024] ;
+     char *** blocks_information;
+
+     /* Get HDFS information */
+     blocks_information = hdfsGetHosts(fs, hdfs_file_name, 0, BLOCKSIZE) ;
+     if (NULL == blocks_information) {
+         DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, hdfs_file_name) ;
+	 return 0 ;
+     }
 
      /* Get hostnames */
      strcpy(hostname_list, "") ;
@@ -354,6 +362,8 @@ int hdfs_stats ( char *hdfs_file_name, char *machine_name, char ***blocks_inform
      /* Print metadata for this file */
      printf("{ name:'%s', is_remote:%d, hostnames:'%s' },\n", hdfs_file_name, is_remote, hostname_list) ;
 
+     /* Free resources */
+     hdfsFreeHosts(blocks_information);
      return 0 ;
 }
 
@@ -382,10 +392,10 @@ int  pos_receptor = 0;
 int  pos_servicio = 0;
 
 pthread_mutex_t  mutex;
-pthread_cond_t   no_lleno;
-pthread_cond_t   no_vacio;
+pthread_cond_t   no_full;
+pthread_cond_t   no_empty;
 pthread_cond_t   arrancado;
-pthread_cond_t   parado;
+pthread_cond_t   stopped;
 
 char * do_reception ( FILE *fd, thargs_t *p )
 {
@@ -426,7 +436,7 @@ void * receptor ( void * param )
 	    // Lock when not full...
             pthread_mutex_lock(&mutex);
             while (n_elementos == MAX_BUFFER) {
-                   pthread_cond_wait(&no_lleno, &mutex);
+                   pthread_cond_wait(&no_full, &mutex);
 	    }
 
 	    // Inserting element into the buffer
@@ -436,7 +446,7 @@ void * receptor ( void * param )
             n_elementos++;
 
 	    // signal not empty...
-            pthread_cond_signal(&no_vacio);
+            pthread_cond_signal(&no_empty);
             pthread_mutex_unlock(&mutex);
 
             ret = do_reception(list_fd, &p) ;
@@ -445,7 +455,7 @@ void * receptor ( void * param )
       // Signal end
       pthread_mutex_lock(&mutex);
       fin=1;
-      pthread_cond_broadcast(&no_vacio);
+      pthread_cond_broadcast(&no_empty);
       pthread_mutex_unlock(&mutex);
       DEBUG_PRINT("INFO[%s]:\t 'receptor' finalized...\n", __FUNCTION__);
 
@@ -463,18 +473,17 @@ void * do_service ( void *params )
        char      file_name_dst[2*PATH_MAX] ;
        char      file_name_org[2*PATH_MAX] ;
 
-       /* Default return value */
-       ret = 0 ;
-
-       /* Set the initial org/dst file name... */
+       /* Set the initial values... */
        memcpy(&thargs, params, sizeof(thargs_t)) ;
-       sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
-       sprintf(file_name_dst, "%s/%s", thargs.destination_dir, thargs.file_name_org) ;
+       sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org, thargs.file_name_org) ;
+       ret = 0 ;
 
        /* Do action with file... */
        if (!strcmp(thargs.action, "hdfs2local"))
        {
-	   // local file is newer than HDFS file so skip it
+           sprintf(file_name_dst, "%s/%s", thargs.destination_dir, thargs.file_name_org) ;
+
+	   // if local file is newer than HDFS file then skip it
 	   int diff_time = cmptime_hdfs_local(thargs.fs, file_name_org, file_name_dst) ;
            if (diff_time > 0) {
                return NULL ;
@@ -485,30 +494,19 @@ void * do_service ( void *params )
        }
        if (!strcmp(thargs.action, "local2hdfs"))
        {
-           sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
-           sprintf(file_name_dst,  "./%s",                         thargs.file_name_org) ;
+           sprintf(file_name_dst, "./%s", thargs.file_name_org) ;
 
 	   // copy local to remote...
            ret = copy_from_local_to_hdfs(thargs.fs, file_name_org, file_name_dst) ;
        }
        if (!strcmp(thargs.action, "stats4hdfs"))
        {
-	   char *** blocks_information;
-
-	   /* Get HDFS information */
-	   blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
-	   if (NULL == blocks_information) {
-	       DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, thargs.file_name_org) ;
-	       pthread_exit((void *)(long)ret) ;
-	   }
-
 	   // file metadata...
-           ret = hdfs_stats(file_name_org, thargs.machine_name, blocks_information) ;
-
-           hdfsFreeHosts(blocks_information);
+           ret = hdfs_stats(thargs.fs, file_name_org, thargs.machine_name) ;
        }
 
        /* The End */
+       pthread_exit((void *)(long)ret) ;
        return NULL ;
 }
 
@@ -531,12 +529,12 @@ void * servicio ( void * param )
 	   {
                 if (fin==1) {
                     DEBUG_PRINT("INFO[%s]:\t 'service' finalized.\n", __FUNCTION__);
-                    pthread_cond_signal(&parado);
+                    pthread_cond_signal(&stopped);
                     pthread_mutex_unlock(&mutex);
                     pthread_exit(0);
                 }
 
-                pthread_cond_wait(&no_vacio, &mutex);
+                pthread_cond_wait(&no_empty, &mutex);
            } // while
 
 	   // Removing element from buffer...
@@ -546,7 +544,7 @@ void * servicio ( void * param )
            n_elementos--;
 
 	   // Signal not full...
-           pthread_cond_signal(&no_lleno);
+           pthread_cond_signal(&no_full);
            pthread_mutex_unlock(&mutex);
 
 	   // Process and response...
@@ -561,16 +559,13 @@ void * servicio ( void * param )
 void main_usage ( char *app_name )
 {
        printf("\n") ;
-       printf("  HDFS Copy 1.0\n") ;
+       printf("  HDFS Copy 1.1\n") ;
        printf(" ---------------\n") ;
        printf("\n") ;
        printf("  Usage:\n") ;
        printf("\n") ;
        printf("  > %s hdfs2local <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
        printf("    Copy from a HDFS path to a local cache path a list of files (within file_list.txt).\n") ;
-       printf("\n") ;
-       printf("  > %s local2hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
-       printf("    Copy to a HDFS path a list of files (within file_list.txt).\n") ;
        printf("\n") ;
        printf("  > %s stats4hdfs <hdfs/path> <file_list.txt> <cache/path>\n", app_name) ;
        printf("    List HDFS metadata from the list of files within file_list.txt.\n") ;
@@ -584,7 +579,7 @@ int main ( int argc, char *argv[] )
     long t1, t2;
     pthread_t  thr;
     pthread_t *ths;
-    int MAX_SERVICIO;
+    int MAX_SERVICE;
     thargs_t p;
 
     // Check arguments
@@ -598,14 +593,14 @@ int main ( int argc, char *argv[] )
     t1 = (long)timenow.tv_sec * 1000 + (long)timenow.tv_usec / 1000 ;
 
     // Initialize threads...
-    MAX_SERVICIO = 3 * get_nprocs_conf() ;
-    ths = malloc(MAX_SERVICIO * sizeof(pthread_t)) ;
+    MAX_SERVICE = 3 * get_nprocs_conf() ;
+    ths = malloc(MAX_SERVICE * sizeof(pthread_t)) ;
 
     pthread_mutex_init(&mutex,NULL);
-    pthread_cond_init(&no_lleno, NULL);
-    pthread_cond_init(&no_vacio, NULL);
+    pthread_cond_init(&no_full, NULL);
+    pthread_cond_init(&no_empty, NULL);
     pthread_cond_init(&arrancado, NULL);
-    pthread_cond_init(&parado, NULL);
+    pthread_cond_init(&stopped, NULL);
 
     // Initialize th_args...
     bzero(&p, sizeof(thargs_t)) ;
@@ -621,7 +616,7 @@ int main ( int argc, char *argv[] )
     }
 
     // Create threads
-    for (int i=0; i<MAX_SERVICIO; i++)
+    for (int i=0; i<MAX_SERVICE; i++)
     {
           pthread_create(&ths[i], NULL, servicio, &p);
 
@@ -639,22 +634,22 @@ int main ( int argc, char *argv[] )
     // Wait for all thread end
     pthread_mutex_lock(&mutex) ;
     while ( (!fin) || (n_elementos > 0) ) {
-             pthread_cond_wait(&parado, &mutex) ;
+             pthread_cond_wait(&stopped, &mutex) ;
     }
     pthread_mutex_unlock(&mutex) ;
 
     // Join threads
     pthread_join(thr, NULL);
-    for (int i=0; i<MAX_SERVICIO; i++) {
+    for (int i=0; i<MAX_SERVICE; i++) {
          pthread_join(ths[i], NULL);
     }
 
     // Finalize
     pthread_mutex_destroy(&mutex);
-    pthread_cond_destroy(&no_lleno);
-    pthread_cond_destroy(&no_vacio);
+    pthread_cond_destroy(&no_full);
+    pthread_cond_destroy(&no_empty);
     pthread_cond_destroy(&arrancado);
-    pthread_cond_destroy(&parado);
+    pthread_cond_destroy(&stopped);
 
     free(ths) ;
     hdfsDisconnect(p.fs) ;
