@@ -3,6 +3,17 @@
  <br>
 </html>
 
+
+## Alternative for hdfs-cp
+In order to copy from a HDFS directory into a local directory, the distcp option should be used:
+```bash
+/mnt/local-storage/prueba-hdfs/hadoop  distcp  hdfs://ip-namenode:port-namenode/HDFS\_directory/  file:///full/local/path 
+``` 
+
+This alternative use a map-reduce job to copy files in parallel.
+Another option is to use hdfs-cp.
+
+
 ## Getting hdfs-cp and initial setup:
 1. To clone from github:
 ```bash
