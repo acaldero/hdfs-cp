@@ -5,14 +5,16 @@
 
 
 ## Alternative for hdfs-cp
-In order to copy from a HDFS directory into a local directory, the distcp option should be used:
+In order to copy from a HDFS directory into a local directory, the distcp option can be used:
 ```bash
 /mnt/local-storage/prueba-hdfs/hadoop  distcp  hdfs://ip-namenode:port-namenode/HDFS\_directory/  file:///full/local/path 
 ``` 
 
-This alternative use a map-reduce job to copy files in parallel.
-Another option is to use hdfs-cp.
+This alternative use a map-reduce job to copy files in parallel with a MAJOR CAVEAT [stackoverflow](https://stackoverflow.com/questions/25816813/effective-ways-to-load-data-from-hdfs-to-local-system):
+"This will be a distributed copy process so the destination you specify on the command line needs to be a place visible to all nodes. 
+To do this you can mount a network share on all nodes and specify a directory in that network share (NFS, Samba, Other) as the destination for your files."
 
+Another option is to use hdfs-cp, that can copy in parallel from one single node.
 
 ## Getting hdfs-cp and initial setup:
 1. To clone from github:
