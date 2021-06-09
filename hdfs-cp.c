@@ -338,9 +338,17 @@ int copy_from_local_to_hdfs ( hdfsFS fs, char *hdfs_file_name, char *local_file_
      return ret ;
 }
 
-int hdfs_stats ( char *hdfs_file_name, char *machine_name, char ***blocks_information )
+int hdfs_stats ( hdfsFS fs, char *hdfs_file_name, char *machine_name )
 {
+     char *** blocks_information;
      char hostname_list[1024] ;
+
+     /* Get HDFS information */
+     blocks_information = hdfsGetHosts(fs, hdfs_file_name, 0, BLOCKSIZE) ;
+     if (NULL == blocks_information) {
+	 DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, hdfs_file_name) ;
+         return -1 ;
+     }
 
      /* Get hostnames */
      strcpy(hostname_list, "") ;
@@ -354,6 +362,7 @@ int hdfs_stats ( char *hdfs_file_name, char *machine_name, char ***blocks_inform
      /* Print metadata for this file */
      printf("{ name:'%s', is_remote:%d, hostnames:'%s' },\n", hdfs_file_name, is_remote, hostname_list) ;
 
+     hdfsFreeHosts(blocks_information);
      return 0 ;
 }
 
@@ -456,60 +465,44 @@ void * receptor ( void * param )
       return NULL;
 }
 
-void * do_service ( void *params )
+int do_service ( thargs_t *thargs )
 {
        int       ret ;
-       thargs_t  thargs ;
        char      file_name_dst[2*PATH_MAX] ;
        char      file_name_org[2*PATH_MAX] ;
 
-       /* Default return value */
+       /* Set the initial values... */
        ret = 0 ;
-
-       /* Set the initial org/dst file name... */
-       memcpy(&thargs, params, sizeof(thargs_t)) ;
-       sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
-       sprintf(file_name_dst, "%s/%s", thargs.destination_dir, thargs.file_name_org) ;
+       sprintf(file_name_org, "%s/%s", thargs->hdfs_path_org,   thargs->file_name_org) ;
+       sprintf(file_name_dst, "%s/%s", thargs->destination_dir, thargs->file_name_org) ;
 
        /* Do action with file... */
-       if (!strcmp(thargs.action, "hdfs2local"))
+       if (!strcmp(thargs->action, "hdfs2local"))
        {
 	   // local file is newer than HDFS file so skip it
-	   int diff_time = cmptime_hdfs_local(thargs.fs, file_name_org, file_name_dst) ;
+	   int diff_time = cmptime_hdfs_local(thargs->fs, file_name_org, file_name_dst) ;
            if (diff_time > 0) {
-               return NULL ;
+               return ret ;
            }
 
 	   // copy remote to local...
-           ret = copy_from_hdfs_to_local(thargs.fs, file_name_org, file_name_dst) ;
+           ret = copy_from_hdfs_to_local(thargs->fs, file_name_org, file_name_dst) ;
        }
-       if (!strcmp(thargs.action, "local2hdfs"))
+       if (!strcmp(thargs->action, "local2hdfs"))
        {
-           sprintf(file_name_org, "%s/%s", thargs.hdfs_path_org,   thargs.file_name_org) ;
-           sprintf(file_name_dst,  "./%s",                         thargs.file_name_org) ;
+           sprintf(file_name_dst, "./%s", thargs->file_name_org) ;
 
 	   // copy local to remote...
-           ret = copy_from_local_to_hdfs(thargs.fs, file_name_org, file_name_dst) ;
+           ret = copy_from_local_to_hdfs(thargs->fs, file_name_org, file_name_dst) ;
        }
-       if (!strcmp(thargs.action, "stats4hdfs"))
+       if (!strcmp(thargs->action, "stats4hdfs"))
        {
-	   char *** blocks_information;
-
-	   /* Get HDFS information */
-	   blocks_information = hdfsGetHosts(thargs.fs, file_name_org, 0, BLOCKSIZE) ;
-	   if (NULL == blocks_information) {
-	       DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, thargs.file_name_org) ;
-	       pthread_exit((void *)(long)ret) ;
-	   }
-
 	   // file metadata...
-           ret = hdfs_stats(file_name_org, thargs.machine_name, blocks_information) ;
-
-           hdfsFreeHosts(blocks_information);
+           ret = hdfs_stats(thargs->fs, file_name_org, thargs->machine_name) ;
        }
 
        /* The End */
-       return NULL ;
+       return ret ;
 }
 
 void * servicio ( void * param )
