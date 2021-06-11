@@ -28,6 +28,7 @@
 #include <libgen.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/sysinfo.h>
@@ -444,10 +445,10 @@ void * receptor ( void * param )
           exit(-1) ;
       }
 
-      fseek(fp, 0L, SEEK_END);
-      t_bytes = ftell(fp);
-      fseek(fp, 0L, SEEK_SET);
-      n_bytes = ftell(fp);
+      fseek(list_fd, 0L, SEEK_END);
+      t_bytes = ftell(list_fd);
+      fseek(list_fd, 0L, SEEK_SET);
+      n_bytes = ftell(list_fd);
 
       // Get file name from listing
       ret = do_reception(list_fd, &p) ;
