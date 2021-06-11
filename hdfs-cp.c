@@ -396,6 +396,22 @@ pthread_cond_t   c_no_empty;
 pthread_cond_t   c_started;
 pthread_cond_t   c_stopped;
 
+long n_bytes = 0L ;
+long t_bytes = 0L ;
+
+void do_stats_ctrc ( int sigid )
+{
+        printf("INFO:\n") ;
+        printf("INFO: Input file:\n") ;
+        printf("INFO: + bytes readed=%ld/%ld\n", n_bytes, t_bytes) ;
+        printf("INFO:\n") ;
+        printf("INFO: Internal buffer report:\n") ;
+        printf("INFO: + pos_servicio=%d\n",  pos_servicio) ;
+        printf("INFO: + pos_receptor=%d\n",  pos_receptor) ;
+        printf("INFO: + n_eltos=%d\n",       n_eltos) ;
+        printf("INFO:\n") ;
+}
+
 char * do_reception ( FILE *fd, thargs_t *p )
 {
        char *str = p->file_name_org ;
@@ -428,6 +444,11 @@ void * receptor ( void * param )
           exit(-1) ;
       }
 
+      fseek(fp, 0L, SEEK_END);
+      t_bytes = ftell(fp);
+      fseek(fp, 0L, SEEK_SET);
+      n_bytes = ftell(fp);
+
       // Get file name from listing
       ret = do_reception(list_fd, &p) ;
       while (ret != NULL)
@@ -443,6 +464,8 @@ void * receptor ( void * param )
             memcpy((void *)&(buffer[pos_receptor]), (void *)&p, sizeof(thargs_t)) ;
             pos_receptor = (pos_receptor + 1) % MAX_BUFFER;
             n_eltos++;
+
+	    n_bytes = ftell(list_fd) ;
 
 	    // signal not empty...
             pthread_cond_signal(&c_no_empty);
@@ -585,6 +608,8 @@ int main ( int argc, char *argv[] )
         main_usage(argv[0]) ;
         exit(-1) ;
     }
+
+    signal(SIGUSR1, do_stats_ctrc) ;
 
     // t1
     gettimeofday(&timenow, NULL) ;
