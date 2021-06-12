@@ -39,13 +39,16 @@ EOF
 ```
   
 ## Typical work session:
+
+### 1. Copy a local list of files from local node into a HDFS directory (in parallel)...
 <html>
- <table>
+ <table width="100%">
   <tr valign="top">
   <td>
 </html>
 
-To copy a local list of files from local node into a HDFS directory (in parallel):
+Example: copy all files listed on "example.txt" into the "./HDFS_root_directory" directory.
+
 ```bash
 : To copy files into tmp...
 cp -a /path/to/dataset ./tmp
@@ -57,19 +60,23 @@ find tmp > example.txt
 ./hdfs-cp.sh local2hdfs  /HDFS_root_directory  example.txt  ./tmp
 ```
 
-All files listed on "example.txt" are going to be copied into the "./HDFS_root_directory" directory.
 In this example, "example.txt" has a list of files (one per line) relatives to "tmp".
   
 <html>
   </td>
   </tr>
  </table>
- <table>
+</html>
+
+### 2. Copy a HDFS list of files from HDFS into a local directory (in parallel)...
+<html>
+ <table width="100%">
   <tr valign="top">
   <td>
 </html>
 
-To copy a HDFS list of files from HDFS into a local directory (in parallel):
+Example: to copy all files listed on "example.txt" to the "./tmp" directory.
+
 ```bash
 : To remove previous tmp content...
 rm -fr ./tmp
@@ -79,23 +86,27 @@ mkdir -p ./tmp
 ./hdfs-cp.sh   hdfs2local  /HDFS_root_directory  example.txt  ./tmp
 ```
 
-All files listed on "example.txt" are going to be copied into the "./tmp" directory.
 In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
 
 <html>
   </td>
   </tr>
  </table>
- <table>
+</html>
+ 
+### 3. List the main metadata for a list of HDFS files...
+
+<html>
+ <table width="100%">
   <tr valign="top">
   <td>
 </html>
 
-To list the main metadata for a list of HDFS files:
-```bash
-: To show the main matadata from associated to a list of files...
+Example: to show the main matadata from associated to a list of files.
   
-./hdfs-cp.sh  stats4hdfs  /HDFS_root_directory  example.txt  ./tmp
+```bash
+: To show the main matadata ...
+./hdfs-ls.sh  stats4hdfs  /HDFS_root_directory  example.txt
 ```
 
 In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory". 

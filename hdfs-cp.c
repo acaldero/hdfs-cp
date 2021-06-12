@@ -651,6 +651,9 @@ int main_getopt ( thargs_t *p, int argc, char *argv[] )
     if (!strcmp(p->action,"local2hdfs") && (!strcmp(p->hdfs_path_org,"") || !strcmp(p->list_files,""))) {
         option = -1 ;
     }
+    if (!strcmp(p->action,"stat4hdfs") && !strcmp(p->hdfs_path_org,"")) {
+        option = -1 ;
+    }
 
     // show options...
     printf("\n") ;
