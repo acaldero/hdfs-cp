@@ -7,7 +7,9 @@
 ## Alternative for hdfs-cp
 In order to copy from a HDFS directory into a local directory, the distcp option can be used:
 ```bash
-/mnt/local-storage/prueba-hdfs/hadoop  distcp  hdfs://ip-namenode:port-namenode/HDFS\_directory/  file:///full/local/path 
+/mnt/local-storage/prueba-hdfs/hadoop  distcp  \
+                                       hdfs://ip-namenode:port-namenode/HDFS\_directory/ \
+                                       file:///full/local/path 
 ``` 
 
 This alternative use a map-reduce job to copy files in parallel with a MAJOR CAVEAT [stackoverflow](https://stackoverflow.com/questions/25816813/effective-ways-to-load-data-from-hdfs-to-local-system):
@@ -76,6 +78,14 @@ In this example, "example.txt" has a list of files (one per line) relatives to "
  </table>
 </html>
 
+
+## Some additional useful options for debugging:
+1. To print a brief report on current work in progress each 12 seconds:
+   1. First, please open a new terminal.
+   2. Then execute:
+   ```bash
+   watch -n 12 kill -10 $(ps axu | grep hdfs-cp | awk '{print $2}')
+   ```
 
 ## Authors
 * :technologist: Saúl Alonso Monsalve
