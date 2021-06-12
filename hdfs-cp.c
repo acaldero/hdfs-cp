@@ -34,7 +34,6 @@
 #include <sys/sysinfo.h>
 #include <time.h>
 #include <sys/time.h>
-#include <getopt.h>
 #include "hdfs.h"
 
 #define BUFFER_SIZE  (      128 * 1024)
@@ -442,7 +441,7 @@ void * receptor ( void * param )
       FILE *list_fd = fopen(p.list_files, "ro") ;
       if (NULL == list_fd) {
           hdfsDisconnect(p.fs) ;
-          perror("fopen") ;
+          perror("fopen: ") ;
           exit(-1) ;
       }
 
@@ -576,16 +575,10 @@ void * servicio ( void * param )
 }
 
 
-//
-// Main
-//
-
-char *hdfs_cp_version = "1.2" ;
-
-void main_usage ( char *app_name, char *app_version )
+void main_usage ( char *app_name )
 {
        printf("\n") ;
-       printf("  HDFS Copy %s\n", app_version) ;
+       printf("  HDFS Copy 1.1\n") ;
        printf(" ---------------\n") ;
        printf("\n") ;
        printf("  Usage:\n") ;
@@ -602,69 +595,6 @@ void main_usage ( char *app_name, char *app_version )
        printf("\n") ;
 }
 
-struct option long_options[] = {
-    { "action",   required_argument, 0,  'a' },
-    { "hdfs",     required_argument, 0,  'h' },
-    { "list",     required_argument, 0,  'f' },
-    { "local",    optional_argument, 0,  'l' },
-    { 0,          0,                 0,   0  }
-} ;
-
-int main_getopt ( thargs_t *p, int argc, char *argv[] )
-{
-    int long_index;
-    int option;
-
-    option     = 0 ;
-    long_index = 0 ;
-
-    while ((option = getopt_long(argc, argv, "a:h:f:l:", long_options, &long_index)) != -1)
-    {
-        switch (option)
-	{
-             case 'a' :
-                 strcpy(p->action,          optarg) ;
-                 break;
-             case 'h' :
-                 strcpy(p->hdfs_path_org,   optarg) ;
-                 break;
-             case 'f' :
-                 strcpy(p->list_files,      optarg) ;
-                 break;
-             case 'l' :
-                 strcpy(p->destination_dir, optarg) ;
-                 break;
-             default:
-                 main_usage(argv[0], hdfs_cp_version) ;
-                 exit(-1) ;
-        }
-    }
-
-    // check options...
-    option = 1 ;
-    if (!strcmp(p->action,"")) {
-        option = -1 ;
-    }
-    if (!strcmp(p->action,"hdfs2local") && (!strcmp(p->hdfs_path_org,"") || !strcmp(p->list_files,""))) {
-        option = -1 ;
-    }
-    if (!strcmp(p->action,"local2hdfs") && (!strcmp(p->hdfs_path_org,"") || !strcmp(p->list_files,""))) {
-        option = -1 ;
-    }
-
-    // show options...
-    printf("\n") ;
-    printf(" Parameters:\n") ;
-    printf(" + action          = %s\n", p->action) ;
-    printf(" + hdfs_path_org   = %s\n", p->hdfs_path_org) ;
-    printf(" + list_files      = %s\n", p->list_files) ;
-    printf(" + destination_dir = %s\n", p->destination_dir) ;
-    printf("\n") ;
-
-    // return option...
-    return option ;
-}
-
 int main ( int argc, char *argv[] )
 {
     struct timeval timenow;
@@ -673,28 +603,14 @@ int main ( int argc, char *argv[] )
     pthread_t *ths;
     int MAX_SERVICIO;
     thargs_t p;
-    int option ;
 
-    // Initialize arguments...
-    bzero(&p, sizeof(thargs_t)) ;
-    gethostname(p.machine_name, HOST_NAME_MAX + 1) ;
-
-    option = main_getopt(&p, argc, argv) ;
-    if (option == -1)
-    {
-        main_usage(argv[0], hdfs_cp_version) ;
+    // Check arguments
+    if (argc != 5) {
+        main_usage(argv[0]) ;
         exit(-1) ;
     }
 
-    // Initialize signal...
     signal(SIGUSR1, do_stats_ctrc) ;
-
-    // Initialize hdfs connection...
-    p.fs = hdfsConnect("default", 0) ;
-    if (NULL == p.fs) {
-        perror("hdfsConnect: ") ;
-        exit(-1) ;
-    }
 
     // t1
     gettimeofday(&timenow, NULL) ;
@@ -709,6 +625,19 @@ int main ( int argc, char *argv[] )
     pthread_cond_init(&c_no_empty, NULL);
     pthread_cond_init(&c_started, NULL);
     pthread_cond_init(&c_stopped, NULL);
+
+    // Initialize th_args...
+    bzero(&p, sizeof(thargs_t)) ;
+    strcpy(p.action,          argv[1]) ;
+    strcpy(p.hdfs_path_org,   argv[2]) ;
+    strcpy(p.list_files,      argv[3]) ;
+    strcpy(p.destination_dir, argv[4]) ;
+    gethostname(p.machine_name, HOST_NAME_MAX + 1) ;
+    p.fs = hdfsConnect("default", 0) ;
+    if (NULL == p.fs) {
+        perror("hdfsConnect: ") ;
+        exit(-1) ;
+    }
 
     // Create threads
     for (int i=0; i<MAX_SERVICIO; i++)
