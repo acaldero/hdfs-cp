@@ -12,9 +12,10 @@ In order to copy from a HDFS directory into a local directory, the distcp option
                                        file:///full/local/path 
 ``` 
 
-This alternative use a map-reduce job to copy files in parallel with a MAJOR CAVEAT [stackoverflow](https://stackoverflow.com/questions/25816813/effective-ways-to-load-data-from-hdfs-to-local-system):
-"This will be a distributed copy process so the destination you specify on the command line needs to be a place visible to all nodes. 
-To do this you can mount a network share on all nodes and specify a directory in that network share (NFS, Samba, Other) as the destination for your files."
+This alternative use a map-reduce job to copy files in parallel with a MAJOR CAVEAT (from [stackoverflow](https://stackoverflow.com/questions/25816813/effective-ways-to-load-data-from-hdfs-to-local-system)):
+
+> "This will be a distributed copy process so the destination you specify on the command line needs to be a place visible to all nodes. 
+> To do this you can mount a network share on all nodes and specify a directory in that network share (NFS, Samba, Other) as the destination for your files."
 
 Another option is to use hdfs-cp, that can copy in parallel from one single node.
 
@@ -40,16 +41,19 @@ EOF
 ## Typical work session:
 <html>
  <table>
-  <tr>
+  <tr valign="top">
   <td>
 </html>
 
 To list the main metadata for a list of HDFS files:
 ```bash
+: To show the main matadata from 
+: associated to a list of files...
+  
 ./hdfs-cp.sh stats4hdfs \
-             /HDFS_root_directory \
-             example.txt \
-             ./tmp
+           /HDFS_root_directory \
+           example.txt \
+           ./tmp
 ```
 
 In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
@@ -61,16 +65,43 @@ In this example, "example.txt" has a list of files (one per line) relatives to "
 
 To copy a HDFS list of files into a local directory:
 ```bash
-rm -fr ./tmp; mkdir -p ./tmp
+: To remove previous tmp content...
+rm -fr ./tmp
+mkdir -p ./tmp
 
+: To copy a HDFS files 
+: to the local node...
 ./hdfs-cp.sh hdfs2local \
-             /HDFS_root_directory \
-             example.txt \
-             ./tmp
+           /HDFS_root_directory \
+           example.txt \
+           ./tmp
 ```
 
 All files listed on "example.txt" are going to be copied into the "./tmp" directory.
 In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
+
+<html>
+  </td>
+  <td>
+</html>
+
+To copy a local list of files into a HDFS directory:
+```bash
+: To copy files into tmp...
+cp -a /path/to/dataset ./tmp
+
+: To get the list of files...
+find tmp > example.txt
+
+: To copy local files to HDFS...
+./hdfs-cp.sh local2hdfs \
+           /HDFS_root_directory \
+           example.txt \
+           ./tmp
+```
+
+All files listed on "example.txt" are going to be copied into the "./HDFS_root_directory" directory.
+In this example, "example.txt" has a list of files (one per line) relatives to "tmp".
 
 <html>
   </td>
