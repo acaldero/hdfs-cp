@@ -119,12 +119,104 @@ In this example, "example.txt" has a list of files (one per line) relatives to "
 
 
 ## Some additional useful options for debugging:
-1. To print a brief report on current work in progress each 12 seconds:
+
+### To print a brief report on current work in progress each 12 seconds:
    1. First, please open a new terminal.
+<html>
+ <table width="100%">
+  <tr valign="top">
+  <td>
+</html>
+
+```bash
+./hdfs-cp.sh hdfs2local \
+             /HDFS_root_directory \
+             example.txt \
+             ./tmp
+```
+
+<html>
+  </td>
+  <td>
+</html>
+
+```bash
+: New terminal !
+```
+
+<html>
+  </td>
+  </tr>
+ </table>
+</html>
+
    2. Then execute:
-   ```bash
-   watch -n 12 kill -10 $(ps axu | grep hdfs-cp | awk '{print $2}')
-   ```
+<html>
+ <table width="100%">
+  <tr valign="top">
+  <td>
+</html>
+
+```bash
+./hdfs-cp.sh hdfs2local \
+             /HDFS_root_directory \
+             example.txt \
+             ./tmp
+```
+
+<html>
+  </td>
+  <td>
+</html>
+
+```bash
+watch -n 12 kill -10 $(ps axu | grep hdfs-cp | awk '{print $2}')
+```
+
+<html>
+  </td>
+  </tr>
+ </table>
+</html>
+
+   3. In the first terminal each 12 seconds a brief report is going to appear:
+<html>
+ <table width="100%">
+  <tr valign="top">
+  <td>
+</html>
+
+```bash
+./hdfs-cp.sh hdfs2local \
+             /HDFS_root_directory \
+             example.txt \
+             ./tmp
+INFO:
+INFO: Input file:
+INFO: + bytes readed=128/1024
+INFO:
+INFO: Internal buffer report:
+INFO: + pos_servicio=2
+INFO: + pos_receptor=10
+INFO: + n_eltos=8
+INFO:
+```
+
+<html>
+  </td>
+  <td>
+</html>
+
+```bash
+watch -n 12 kill -10 $(ps axu | grep hdfs-cp | awk '{print $2}')
+```
+
+<html>
+  </td>
+  </tr>
+ </table>
+</html>
+
 
 ## Authors
 * :technologist: Saúl Alonso Monsalve
