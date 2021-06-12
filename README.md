@@ -45,47 +45,7 @@ EOF
   <td>
 </html>
 
-To list the main metadata for a list of HDFS files:
-```bash
-: To show the main matadata from 
-: associated to a list of files...
-  
-./hdfs-cp.sh stats4hdfs \
-           /HDFS_root_directory \
-           example.txt \
-           ./tmp
-```
-
-In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
-
-<html>
-  </td>
-  <td>
-</html>
-
-To copy a HDFS list of files into a local directory:
-```bash
-: To remove previous tmp content...
-rm -fr ./tmp
-mkdir -p ./tmp
-
-: To copy a HDFS files 
-: to the local node...
-./hdfs-cp.sh hdfs2local \
-           /HDFS_root_directory \
-           example.txt \
-           ./tmp
-```
-
-All files listed on "example.txt" are going to be copied into the "./tmp" directory.
-In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
-
-<html>
-  </td>
-  <td>
-</html>
-
-To copy a local list of files into a HDFS directory:
+To copy a local list of files from local node into a HDFS directory (in parallel):
 ```bash
 : To copy files into tmp...
 cp -a /path/to/dataset ./tmp
@@ -94,15 +54,52 @@ cp -a /path/to/dataset ./tmp
 find tmp > example.txt
 
 : To copy local files to HDFS...
-./hdfs-cp.sh local2hdfs \
-           /HDFS_root_directory \
-           example.txt \
-           ./tmp
+./hdfs-cp.sh local2hdfs  /HDFS_root_directory  example.txt  ./tmp
 ```
 
 All files listed on "example.txt" are going to be copied into the "./HDFS_root_directory" directory.
 In this example, "example.txt" has a list of files (one per line) relatives to "tmp".
+  
+<html>
+  </td>
+  </tr>
+ </table>
+ <table>
+  <tr valign="top">
+  <td>
+</html>
 
+To copy a HDFS list of files from HDFS into a local directory (in parallel):
+```bash
+: To remove previous tmp content...
+rm -fr ./tmp
+mkdir -p ./tmp
+
+: To copy a HDFS files to the local node...
+./hdfs-cp.sh   hdfs2local  /HDFS_root_directory  example.txt  ./tmp
+```
+
+All files listed on "example.txt" are going to be copied into the "./tmp" directory.
+In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory".
+
+<html>
+  </td>
+  </tr>
+ </table>
+ <table>
+  <tr valign="top">
+  <td>
+</html>
+
+To list the main metadata for a list of HDFS files:
+```bash
+: To show the main matadata from associated to a list of files...
+  
+./hdfs-cp.sh  stats4hdfs  /HDFS_root_directory  example.txt  ./tmp
+```
+
+In this example, "example.txt" has a list of files (one per line) relatives to "HDFS\_root\_directory". 
+ 
 <html>
   </td>
   </tr>
