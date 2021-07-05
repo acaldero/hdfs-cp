@@ -24,65 +24,85 @@ import os
 import argparse
 import time
 import sys
-import random
-import dask.bag as db
-import dask.distributed
+import gzip
 import multiprocessing as mp
 from   snakebite.client import Client
 
-#
-def costly_simulation(list_param):
-    time.sleep(random.random())
-    return sum(list_param)
 
-def copy_hdfs_to_local(args):
-    nfiles = 0
-    if not os.path.exists(args.destination):
-         os.mkdir(args.destination, 0o770)
+def show_header():
+    print('')
+    print(' HDFS-Copy (Daloflow)')
+    print(' --------------------')
+    print('')
 
-    # verbose
-    print(' * Copy from '+ args.source + ' to ' + args.destination + '...')
-
-    # get time
-    start_time = time.time()
-
-    # hdfs client
+def copy_hdfs_to_local(args, elto):
+    # initialize
     client = Client(args.hdfs_host, args.hdfs_port)
-    for f in client.copyToLocal([args.source], args.destination):
-         nfiles = nfiles + 1
-         if f['result'] == False:
-             print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
-         if (nfiles % 100) == 0:
-             print('C', end='')
 
-    # get time
+    # copy
+    src_file_name = args.hdfs_path   + elto
+    dst_file_name = args.destination + elto
+    try:
+        dst_dir_name = os.path.dirname(dst_file_name)
+        os.makedirs(dst_dir_name, 0o770, exist_ok=True)
+
+        for f in client.copyToLocal([src_file_name], dst_file_name):
+            if f['result'] == False:
+                print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
+    except:
+        print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + src_file_name)
+        return 0
+
+    # return
+    return 1
+
+def copy_parallel(args):
+    # read data
+    print(' * Reading list of file...', end='')
+    data = []
+    with gzip.open(args.source, mode='rt') as data_file:
+        for line in data_file:
+            data.append(line.rstrip('\n'))
+    print(' Done!')
+
+    # Starting
+    print(' * Number of processors: ', mp.cpu_count())
+    start_time = time.time()
+    pool = mp.Pool(mp.cpu_count())
+
+    # do action...
+    results = []
+    if args.action == 'hdfs2local':
+        results = pool.starmap(copy_hdfs_to_local, [(args, row) for row in data])
+
+    # Stopping
+    pool.close()
     stop_time = time.time()
 
     # verbose
-    print(" * Execution time:  %s seconds" % (stop_time - start_time))
-    print(" * Number of files: %s seconds" % (nfiles))
-    return True
+    print(" * Execution time: %s seconds" % (stop_time - start_time))
+    print(" * Number files:   %s"         % (results))
 
 
 # default values
 hdfs_host   = '10.0.40.19'
 hdfs_port   = 9600
+hdfs_path   = '/daloflow/'
 action      = 'hdfs2local'
-source      = '/daloflow/dataset32x32/'
-destination = '/mnt/local-storage/tmp/dataset32x32/'
+source      = 'dataset128x128.list.txt.gz'
+destination = '/mnt/local-storage/tmp/'
 
 # parse
 parser = argparse.ArgumentParser(description='HDFS client')
 parser.add_argument('--hdfs_host',   type=str, default=hdfs_host,   nargs=1, required=False, help='HDFS host')
 parser.add_argument('--hdfs_port',   type=str, default=hdfs_port,   nargs=1, required=False, help='HDFS port')
+parser.add_argument('--hdfs_path',   type=str, default=hdfs_path,   nargs=1, required=False, help='HDFS path')
 parser.add_argument('--action',      type=str, default=action,      nargs=1, required=False, help='Action')
 parser.add_argument('--source',      type=str, default=source,      nargs=1, required=False, help='Source path')
 parser.add_argument('--destination', type=str, default=destination, nargs=1, required=False, help='Destination path')
 args   = parser.parse_args()
 
-# copy
-print("Number of processors: ", mp.cpu_count())
-
-copy_hdfs_to_local(args)
-sys.exit()
+# do main
+show_header()
+copy_parallel(args)
 
