@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 #
 #  Copyright 2019-2021 Jose Rivadeneira Lopez-Bravo, Saul Alonso Monsalve, Felix Garcia Carballeira, Alejandro Calderon Mateos
@@ -65,6 +66,11 @@ def main_show_header(args):
     print('   + destination: ' + args.destination)
     print('')
 
+# log errors
+def log_error(file_name):
+    file_obj = open('pending.txt', 'a')
+    file_obj.write(file_name)
+    file_obj.close()
 
 # initialize
 def init_worker(f1, f2):
@@ -83,6 +89,7 @@ def copy_hdfs_to_local(args, elto):
         for f in copy_hdfs_to_local.client.copyToLocal([src_file_name], dst_file_name):
             if f['result'] == False:
                 print('File ' + f['path'] + ' NOT copied because "' + str(f['error']) + '", sorry !')
+                log_error(src_file_name)
     except:
         print('Exception ' + str(sys.exc_info()[0]) + ' on file ' + src_file_name)
         return 0
@@ -131,7 +138,7 @@ def main_action_in_parallel(args):
 
     # verbose
     print(" * Execution time: %s seconds" % (stop_time - start_time))
-    print(" * Number files:   %s"         % (results))
+    print(" * Number files:   %s"         % (sum(results)))
 
 
 # do main
