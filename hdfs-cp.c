@@ -167,6 +167,32 @@ int cmptime_hdfs_local ( hdfsFS fs, char *hdfs_file_name, char *local_file_name 
      return 2 * (t1 - t2) ;
 }
 
+int check_hdfs_locality ( hdfsFS fs, char *hdfs_file_name, char *machine_name )
+{
+     int ret = 0;
+
+     /* Get HDFS information */
+     char ***blocks_information = hdfsGetHosts(fs, hdfs_file_name, 0, BLOCKSIZE) ;
+     if (NULL == blocks_information) {
+	 DEBUG_PRINT("ERROR[%s]:\t hdfsGetHosts for '%s'.\n", __FUNCTION__, hdfs_file_name) ;
+         return ret ;
+     }
+
+     /* Get is_remote */
+     ret = (strncmp(machine_name, blocks_information[0][0], strlen(machine_name)) != 0) ;
+
+     // DEBUG
+     DEBUG_PRINT("INFO[%s]:\t Locality in HDFS:\t%d\n", __FUNCTION__, ret) ;
+
+     /* 
+      * Return
+      *   0: not local copy
+      *   1: local copy
+      */
+     hdfsFreeHosts(blocks_information);
+     return ret ;
+}
+
 
 int write_buffer ( hdfsFS fs, hdfsFile write_fd1, int write_fd2, void *buffer, int buffer_size, int num_readed_bytes )
 {
@@ -502,7 +528,13 @@ int do_service ( thargs_t *thargs )
        sprintf(file_name_dst, "%s/%s", thargs->destination_dir, thargs->file_name_org) ;
 
        /* Do action with file... */
-       if (!strcmp(thargs->action, "hdfs2local"))
+       if (!strcmp(thargs->action, "local2hdfs"))
+       {
+	   // copy local to remote...
+           ret = copy_from_local_to_hdfs(thargs->fs, file_name_org, file_name_dst) ;
+       }
+       if ( (!strcmp(thargs->action, "hdfs2local")) ||
+            (!strcmp(thargs->action, "hdfs2local-full")) )
        {
 	   // local file is newer than HDFS file so skip it
 	   int diff_time = cmptime_hdfs_local(thargs->fs, file_name_org, file_name_dst) ;
@@ -513,12 +545,15 @@ int do_service ( thargs_t *thargs )
 	   // copy remote to local...
            ret = copy_from_hdfs_to_local(thargs->fs, file_name_org, file_name_dst) ;
        }
-       if (!strcmp(thargs->action, "local2hdfs"))
+       if (!strcmp(thargs->action, "hdfs2local-partial"))
        {
-           sprintf(file_name_dst, "./%s", thargs->file_name_org) ;
-
-	   // copy local to remote...
-           ret = copy_from_local_to_hdfs(thargs->fs, file_name_org, file_name_dst) ;
+	   // check if it is a HDFS local file
+	   int in_local_hdfs_node = check_hdfs_locality(thargs->fs, file_name_org, thargs->machine_name) ;
+        
+	   // copy remote to local...
+           if (in_local_hdfs_node == 0) {
+               ret = copy_from_hdfs_to_local(thargs->fs, file_name_org, file_name_dst) ;
+           }
        }
        if (!strcmp(thargs->action, "stats4hdfs"))
        {
